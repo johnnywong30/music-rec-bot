@@ -1,8 +1,11 @@
 from __future__ import annotations
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, List, Dict
 from bot.tidal import API_URL, get_headers
 from bot.tidal.auth import get_tidal_token
 import httpx
+from bot.tidal.models import Track
+from bot.logging import log
+import json
 
 
 class SearchQuery(TypedDict):
@@ -12,6 +15,16 @@ class SearchQuery(TypedDict):
     limit: int
     countryCode: str
     popularity: POPULARITY_TYPES
+
+
+def find_track_with_artist(tracks: List[Dict], artist_name: str) -> List[Dict]:
+    tracks_with_artist = [
+        track
+        for track in tracks
+        if len([artist for artist in track["artists"] if artist["name"] == artist_name])
+        > 0
+    ]
+    return tracks_with_artist
 
 
 async def search_track(
@@ -34,13 +47,36 @@ async def search_track(
     async with httpx.AsyncClient() as client:
         auth = await get_tidal_token()
         headers = get_headers(token=auth["access_token"])
-        response = await client.get(
-            url=search_url,
-            params=params,
-            headers=headers,
-        )
-        response = response.json()
-    return response
+        if artist_name:
+            track_found = False
+            while not track_found:
+                response = await client.get(
+                    url=search_url,
+                    params=params,
+                    headers=headers,
+                )
+                response_json = response.json()
+                tracks = response_json["tracks"]
+                tracks = [track["resource"] for track in tracks]
+                tracks_with_artist = find_track_with_artist(tracks, artist_name)
+                # return tracks_with_artist
+                if len(tracks_with_artist) > 0:
+                    track = Track(**tracks_with_artist[0])
+                    return track
+                else:
+                    offset += limit
+        else:
+            response = await client.get(
+                url=search_url,
+                params=params,
+                headers=headers,
+            )
+            response_json = json.loads(response.text)
+            tracks = response_json["tracks"]
+            tracks = [track["resource"] for track in tracks]
+            track = Track(**tracks[0])
+
+            return track
 
 
 SEARCH_TYPES = Literal["ARTISTS", "ALBUMS", "TRACKS", "VIDEOS"]
