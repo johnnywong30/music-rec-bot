@@ -1,7 +1,12 @@
 import logging
 from bot.context import Config
 
+# hide imported module logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 _log_level = logging.DEBUG if Config.environment == "DEV" else logging.INFO
+
 
 logging.basicConfig(
     level=_log_level,
