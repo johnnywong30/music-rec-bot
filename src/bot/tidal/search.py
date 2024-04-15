@@ -34,7 +34,7 @@ async def search_track(
     limit: int = 10,
     country_code: str = "US",
     popularity: POPULARITY_TYPES = "WORLDWIDE",
-):
+) -> Track:
     search_url = API_URL + "/search"
     params = SearchQuery(
         query=track_name,
@@ -59,7 +59,6 @@ async def search_track(
                 tracks = response_json["tracks"]
                 tracks = [track["resource"] for track in tracks]
                 tracks_with_artist = find_track_with_artist(tracks, artist_name)
-                # return tracks_with_artist
                 if len(tracks_with_artist) > 0:
                     track = Track(**tracks_with_artist[0])
                     return track
@@ -75,7 +74,6 @@ async def search_track(
             tracks = response_json["tracks"]
             tracks = [track["resource"] for track in tracks]
             track = Track(**tracks[0])
-
             return track
 
 
